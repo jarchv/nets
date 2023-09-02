@@ -1,0 +1,27 @@
+model_params:
+  in_channels: 3
+  embedding_dim: 64
+  num_embeddings: 512
+  img_size: 64
+  beta: 0.25
+
+data_params:
+  root_dir: ../data/
+  num_workers: 4
+  batch_size: 16
+  patch_size: 16
+
+exp_params:
+  lr: 0.005
+  weight_decay: 0.0
+  scheduler_gamma: 0.0
+  kld_weight: 0.00025
+  manual_seed: 7
+
+trainer_params:
+  gpus: [1]
+  max_epochs: 10
+
+logging_params:
+  save_dir: "logs/"
+  name: "vqvae"

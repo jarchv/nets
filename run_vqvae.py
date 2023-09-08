@@ -1,7 +1,7 @@
 import os
 import yaml
 import argparse
-from train.trainer_ddpm import TrainerDDPM as Trainer
+from train.trainer_vqvae import TrainerVQVAE as Trainer
 
 def dict_to_namespace(d):
     n = argparse.Namespace()
@@ -14,7 +14,7 @@ def dict_to_namespace(d):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Train Network")
-    parser.add_argument('--config', default='ddpm.yaml', help='config file')
+    parser.add_argument('--config', default='vqvae.yaml', help='config file')
     args = parser.parse_args()
     
     

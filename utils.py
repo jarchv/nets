@@ -55,9 +55,9 @@ def get_celeb_data(img_size=64, batch_size=4):
     assert (train_size + valid_size + test_size) == len(celeb_dataset)
 
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=batch_size, shuffle=True)
+        train_set, batch_size=batch_size, shuffle=True, num_workers=4)
     valid_loader = torch.utils.data.DataLoader(
-        valid_set, batch_size=batch_size, shuffle=False)
+        valid_set, batch_size=batch_size, shuffle=False, num_workers=4)
     test_loader  = torch.utils.data.DataLoader(
         test_set, batch_size=batch_size, shuffle=False)
 

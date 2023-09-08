@@ -1,20 +1,17 @@
 hyp:
-  hid_dim: 3
-  batch_size: 16
+  batch_size: 64
   epochs: 100
   lr: 0.0001
-  beta1: 0.9
+  beta1: 0.1
   beta2: 0.99
   timesteps: 1000
-  init_dim: 64
-
 data:
   num_workers: 4
   img_size: 64
   img_ch: 3
-exp:
+log:
   device: "cuda:0"
-  try_num: 1
+  log_num: 2
   load_epoch: 0
   save_freq: 1
   save_dir: "logs/"

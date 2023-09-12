@@ -19,7 +19,7 @@ def save_batch(data, filename=None):
     plt.xticks([])
     plt.yticks([])
     
-    m = to_view(data.detach().cpu())
+    m = torch.clamp(to_view(data.detach().cpu()), 0, 1)
     m = make_grid(m, padding=1, nrow=4, pad_value=100)
     m = m.permute(1,2,0)
 

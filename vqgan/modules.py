@@ -118,15 +118,12 @@ class AttnBlock(nn.Module):
         return x + c
 
 class Codebook(nn.Module):
-    def __init__(self, 
-        num_embeddings, 
-        embedding_dim, 
-        beta):
+    def __init__(self, config):
         super(Codebook, self).__init__()
-        self.num_embeddings = num_embeddings
-        self.embedding_dim  = embedding_dim
-        self.beta = beta
-        self.embedding = nn.Embedding(num_embeddings, embedding_dim)
+        self.num_embeddings = config.num_embed
+        self.embedding_dim  = config.embed_dim
+        self.beta = config.beta
+        self.embedding = nn.Embedding(self.num_embeddings, self.embedding_dim)
         self.embedding.weight.data.uniform_(-1/self.num_embeddings, 1/self.num_embeddings)
     
     def forward(self, z):

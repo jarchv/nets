@@ -1,32 +1,34 @@
 import torch
 import torch.nn  as nn
+import os
+import yaml
+import argparse
+import importlib
+import sys
+
+from torchsummary import summary
 from .modules import ResidualBlock, AttnBlock, Downsample, GroupNorm, Upsample
 
 class Encoder(nn.Module):
-    def __init__(
-        self,
-        img_channels,
-        hid_channels,
-        f_channels,
-        num_res_layers,
-        attn_resolutions,
-        resolution,
-        latent_dim):
+    def __init__(self, config):
         super(Encoder, self).__init__()
 
-        prev_resolutions = (1,) + f_channels
-        # Downsampling
-        layers = [nn.Conv2d(img_channels, hid_channels, 3, stride=1, padding=1)]
-        for i in range(len(f_channels)):
-            in_channels  = hid_channels * prev_resolutions[i]
-            out_channels = hid_channels * f_channels[i]
+        prev_resolutions = (1,) + tuple(config.channels_mult)
+        resolution = config.resolution
+        in_channels  = config.in_channels
+        out_channels = config.hid_channels
 
-            for j in range(num_res_layers):
+        # Downsampling
+        layers = [nn.Conv2d(in_channels, out_channels, 3, stride=1, padding=1)]
+        for i in range(len(config.channels_mult)):
+            in_channels  = config.hid_channels * prev_resolutions[i]
+            out_channels = config.hid_channels * config.channels_mult[i]
+            for j in range(config.num_res_layers):
                 layers.append(ResidualBlock(in_channels, out_channels))
                 in_channels = out_channels
-                if resolution in attn_resolutions:
+                if resolution in config.attn_resolutions:
                     layers.append(AttnBlock(in_channels))
-            if i != len(f_channels) - 1:
+            if i != len(config.channels_mult) - 1:
                 layers.append(Downsample(in_channels))
                 resolution //= 2
 
@@ -38,28 +40,21 @@ class Encoder(nn.Module):
         # End
         layers.append(GroupNorm(out_channels))
         layers.append(nn.SiLU())
-        layers.append(nn.Conv2d(out_channels, latent_dim, 3, stride=1, padding=1))
+        layers.append(nn.Conv2d(out_channels, config.embed_dim, 3, stride=1, padding=1))
         self.model = nn.Sequential(*layers)
+
     def forward(self, x):
         # x: (B,C,H,W)
         h = self.model(x)        # h: (B,N,H,W)
         return h
 
 class Decoder(nn.Module):
-    def __init__(
-        self,
-        img_channels,
-        hid_channels,
-        f_channels,
-        num_res_layers,
-        attn_resolutions,
-        resolution,
-        latent_dim):
+    def __init__(self, config):
         super(Decoder, self).__init__()
 
-        in_channels  = latent_dim
-        out_channels = f_channels[-1] * hid_channels
-        resolution   = resolution // 2 ** (len(f_channels)-1)
+        in_channels  = config.embed_dim
+        out_channels = config.channels_mult[-1] * config.hid_channels
+        resolution   = config.resolution // 2 ** (len(config.channels_mult)-1)
 
         # Middle
         layers = [
@@ -69,14 +64,14 @@ class Decoder(nn.Module):
             ResidualBlock(out_channels, out_channels)]
         
         # Upsampling
-        for i in reversed(range(len(f_channels))):
+        for i in reversed(range(len(config.channels_mult))):
             in_channels = out_channels
-            out_channels = hid_channels * f_channels[i]
+            out_channels = config.hid_channels * config.channels_mult[i]
 
-            for j in range(num_res_layers):
+            for j in range(config.num_res_layers):
                 layers.append(ResidualBlock(in_channels, out_channels))
                 in_channels = out_channels
-                if resolution in attn_resolutions:
+                if resolution in config.attn_resolutions:
                     layers.append(AttnBlock(in_channels))
             if i != 0:
                 layers.append(Upsample(in_channels, True))
@@ -84,7 +79,7 @@ class Decoder(nn.Module):
 
         # End
         layers.append(GroupNorm(out_channels))
-        layers.append(nn.Conv2d(out_channels, img_channels, 3, stride=1, padding=1))
+        layers.append(nn.Conv2d(out_channels, config.in_channels, 3, stride=1, padding=1))
         self.model = nn.Sequential(*layers)
         
     def forward(self, x):
@@ -92,26 +87,22 @@ class Decoder(nn.Module):
         h = self.model(x)        # h: (B,C,H,W)
         return h
 
-class Discriminator(nn.Module):
-    def __init__(
-        self,
-        img_channels,
-        hid_channels=32,
-        num_layers=3):
-        super(Discriminator, self).__init__()
+class NLayerDiscriminator(nn.Module):
+    def __init__(self, config):
+        super(NLayerDiscriminator, self).__init__()
         
-        out_channels = hid_channels
-        layers = [nn.Conv2d(img_channels, out_channels, 3, stride=1, padding=1)]
+        out_channels = config.dis_hid_channels
+        layers = [nn.Conv2d(config.in_channels, out_channels, 3, stride=1, padding=1)]
 
-        for i in range(1, num_layers):
+        for i in range(1, config.dis_num_layers):
             in_channels  = out_channels
-            out_channels = hid_channels * min(2**i, 8)
+            out_channels = config.dis_hid_channels * min(2**i, 8)
             layers += [
                 nn.Conv2d(
                     in_channels, 
                     out_channels, 
                     kernel_size = 4, 
-                    stride= 2 if i < num_layers else 1, padding=1, bias=False),
+                    stride= 2 if i < config.dis_num_layers else 1, padding=1, bias=False),
                 nn.BatchNorm2d(out_channels),
                 nn.LeakyReLU(0.2, inplace=True)
             ]
@@ -124,15 +115,29 @@ class Discriminator(nn.Module):
         return h
 
 if __name__ == '__main__':
-    x = torch.randn(10, 3, 64, 64)
-    E = Encoder(3)
+    sys.path.append("..")
+    utils = importlib.import_module("utils")
+    parser = argparse.ArgumentParser(description="Train Network")
+    parser.add_argument('--config', default='vqgan.yaml', help='config file')
+    args = parser.parse_args()
+    
+    with open(os.path.join("../configs", args.config), "r") as f:
+        config = yaml.safe_load(f)
+    config = utils.dict_to_namespace(config)
+
+    x = torch.randn(10, 3, 64, 64).to(config.log.device)
+
+    print("\nEncoder:")
+    E = Encoder(config.vqgan.hyp).to(x.device)
+    summary(E, (3, 64, 64))
     y = E(x)
-    print(y.shape)
 
-    G = Decoder(3)
+    print("\nDecoder:")
+    G = Decoder(config.vqgan.hyp).to(x.device)
+    summary(G, (64, 16, 16))
     x_hat = G(y)
-    print(x_hat.shape)
 
-    D = Discriminator(3)
+    print("\nDiscriminator:")
+    D = NLayerDiscriminator(config.vqgan.hyp).to(x.device)
+    summary(D, (3, 64, 64))
     z = D(x_hat)
-    print(z.shape)

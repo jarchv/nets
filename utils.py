@@ -3,10 +3,21 @@ import torchvision
 import time
 import matplotlib.pyplot as plt
 import numpy as np
+import argparse
+import torch.nn  as nn
 
 from torchvision import transforms
 from torchvision.utils import make_grid
 
+def dict_to_namespace(d):
+    n = argparse.Namespace()
+    for key, value in d.items():
+        if isinstance(value, dict):
+            setattr(n, key, dict_to_namespace(value))
+        else:
+            setattr(n, key, value)
+    return n
+    
 def to_net(tensor):
     return tensor * 2 - 1
 
@@ -67,3 +78,14 @@ def get_celeb_data(img_size=64, batch_size=4):
     data_dict['test_loader']  = (test_loader , test_size )
 
     return data_dict
+
+
+# Discriminator
+
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)

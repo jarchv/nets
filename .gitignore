@@ -3,3 +3,5 @@ logs
 batch-*.png
 *.pyc
 celeba
+vqgan/taming
+taming/

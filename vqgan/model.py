@@ -1,58 +1,27 @@
 import torch
 import torch.nn  as nn
 
-from .nns import Encoder, Decoder, Discriminator
+from .nns import Encoder, Decoder
 from .modules import Codebook
 
 def normalized(t):
     return t * 2 - 1
 
 class VQGAN(nn.Module):
-    def __init__(
-        self,
-        img_channels,
-        hid_channels,
-        f_channels,
-        num_res_layers,
-        attn_resolutions,
-        resolution,
-        num_embeddings,
-        embedding_dim,
-        beta,
-        device):
+    def __init__(self, config, device):
         super(VQGAN, self).__init__()
 
-        self.E = Encoder(
-            img_channels,
-            hid_channels,
-            (1,2,4),
-            num_res_layers,
-            attn_resolutions,
-            resolution,
-            embedding_dim).to(device)
-        self.G = Decoder(
-            img_channels,
-            hid_channels,
-            (1,2,4),
-            num_res_layers,
-            attn_resolutions,
-            resolution,
-            embedding_dim).to(device)
-        self.D = Discriminator(
-            img_channels).to(device)
-
-        self.q = Codebook(
-            num_embeddings=num_embeddings,
-            embedding_dim=embedding_dim,
-            beta=beta).to(device)
+        self.E = Encoder(config).to(device)
+        self.G = Decoder(config).to(device)
+        self.q = Codebook(config).to(device)
         
         self.quantize_conv = nn.Conv2d(
-            in_channels=embedding_dim,
-            out_channels=embedding_dim,
+            in_channels=config.embed_dim,
+            out_channels=config.embed_dim,
             kernel_size=1).to(device)
         self.post_quant_conv = nn.Conv2d(
-            in_channels=embedding_dim,
-            out_channels=embedding_dim,
+            in_channels=config.embed_dim,
+            out_channels=config.embed_dim,
             kernel_size=1).to(device)
 
     def encode(self, imgs):
@@ -76,13 +45,34 @@ class VQGAN(nn.Module):
         lambda_ = torch.clamp(lambda_, 0, 1e4).detach()
         return lambda_ * 0.8
 
-    def get_x_hat(self, x, verbose=False):
-        x     = normalized(x)
-        x_hat, _, _ = self(x)
-        return x_hat
+    @staticmethod
+    def adopt_weight(disc_factor, i, threshold, value=0.):
+        if i < threshold:
+            disc_factor = value
+        return disc_factor
 
     def forward(self, x):
         codebook_map, codebook_ind, q_loss = self.encode(x)
         decoded_imgs = self.decode(codebook_map)
         return decoded_imgs, codebook_ind, q_loss
         
+if __name__ == "__main__":
+    import importlib
+    import argparse
+    import os
+    import sys
+    import yaml
+
+    sys.path.append("..")
+    utils = importlib.import_module("utils")
+    parser = argparse.ArgumentParser(description="Train Network")
+    parser.add_argument('--config', default='vqgan.yaml', help='config file')
+    args = parser.parse_args()
+    
+    with open(os.path.join("../configs", args.config), "r") as f:
+        config = yaml.safe_load(f)
+    config = utils.dict_to_namespace(config)
+    x = torch.randn(10, 3, 64, 64).to(config.log.device)
+    model = VQGAN(config.vqgan.hyp, x.device).to(x.device)
+    y, ind, q_loss = model(x)
+    print(y.shape, ind.shape, q_loss.shape)

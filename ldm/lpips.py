@@ -7,7 +7,7 @@ from torchvision import models
 from collections import namedtuple
 from tqdm import tqdm
 
-from .nns import NLayerDiscriminator
+from nns import NLayerDiscriminator
 
 URL_MAP = {
     "vgg_lpips": "https://heibox.uni-heidelberg.de/f/607503859c864bc1b30b/?dl=1"

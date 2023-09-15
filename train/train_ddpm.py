@@ -37,6 +37,33 @@ class TrainerDDPM(Trainer):
 
         return loss.item()
 
+    def save_model(self, ep):
+        print('Saving "model-{:d}"... '.format(ep), end='')
+
+        file_model = 'model-{:d}.pth'.format(ep)
+        save_path  = os.path.join(self.checkpoints_path, file_model)
+		
+        checkpoint = {}
+
+        checkpoint['state_dict_net'] = self.model.state_dict()   
+        checkpoint['opt_model'] = self.opt_model.state_dict()
+
+        torch.save(checkpoint, save_path)
+        print("Done.")
+
+    def load_model(self):
+        if self.load_epoch <= 0:
+            return
+        print('\nLoading "model-{:d}"...'.format(self.load_epoch), end='')
+        file_model = 'model-{:d}.pth'.format(self.load_epoch)
+
+        load_path  = os.path.join(self.checkpoints_path, file_model)
+        checkpoint = torch.load(load_path)
+
+        self.model.load_state_dict(checkpoint['state_dict_net'])
+        self.opt_model.load_state_dict(checkpoint['opt_model'])
+        print("Done.")
+        
     def train_step(self):
         self.set_model()
 

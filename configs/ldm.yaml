@@ -1,0 +1,30 @@
+hyp:
+  # Training hyperparameters
+  batch_size: 64
+  epochs: 100
+  lr: 0.0001
+  beta1: 0.1
+  beta2: 0.99
+
+  # VQ-VAE
+  in_dim: 3
+  hid_dim: 32
+  n_res_layers: 2
+  f_dims: 
+  num_res_layers: 2
+  attn_resolutions: [16]
+  resolution: 64
+  num_embeddings: 512 # K
+  embedding_dim: 64   # D
+  beta: 0.25
+data:
+  num_workers: 4
+  img_size: 64
+  img_ch: 3
+log:
+  device: "cuda:0"
+  log_num: 1
+  load_epoch: 15
+  save_freq: 5
+  save_dir: "logs/"
+  name: "vqgan"

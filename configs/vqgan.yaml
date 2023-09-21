@@ -12,9 +12,9 @@ vqgan:
     dis_hid_channels: 64
     dis_num_layers: 3
 train:
-  lr: 0.01
+  lr: 0.0001
   epochs: 100
-  batch_size: 64
+  batch_size: 4
   beta1: 0.5
   beta2: 0.99
   disc_factor: 1.
@@ -24,7 +24,7 @@ data:
   img_ch: 3
 log:
   device: "cuda:0"
-  log_num: 1
+  log_num: 2
   load_epoch: 0
   save_freq: 5
   save_dir: "logs/"

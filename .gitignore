@@ -1,6 +1,6 @@
 __pycache__
 logs
-batch-*.png
+*.png
 *.pyc
 celeba
 vqgan/taming

@@ -1,5 +1,5 @@
-models:
-  vqgan:
+vqgan:
+  model:
     in_channels: 3
     hid_channels: 64
     channels_mult: [1,2,4,8]
@@ -9,21 +9,9 @@ models:
     num_embed: 1024
     embed_dim: 3
     beta: 0.25
-  ddim:
-    in_channels: 3
-    in_resolution: 8
-    hid_channels: 64
-    channels_mult: [1,1,2,4]
-    num_res_layers: 2
-    embed_dim: 3
-    timesteps: 1000
-    sampling_timesteps: 10
-    eta: 0.
-    vqgan_log: 1
-    vqgan_epoch: 95
 train:
   lr: 0.0001
-  epochs: 200
+  epochs: 100
   batch_size: 48
   beta1: 0.5
   beta2: 0.99
@@ -34,8 +22,8 @@ data:
   img_ch: 3
 log:
   device: "cuda:0"
-  log_num: 1
-  load_epoch: 100
+  log_num: 6
+  load_epoch: 0
   save_freq: 5
   save_dir: "logs/"
-  name: "ldm"
+  name: "vqgan-nodisc"

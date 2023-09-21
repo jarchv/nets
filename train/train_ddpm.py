@@ -10,7 +10,7 @@ model = importlib.import_module('ddpm.model')
 
 from .trainer import Trainer
 
-class TrainerDDPM(Trainer):
+class TrainDDPM(Trainer):
     def __init__(self, config):
         super().__init__(config)
         self.timesteps = config.hyp.timesteps
